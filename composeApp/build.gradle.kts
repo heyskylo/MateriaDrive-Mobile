@@ -15,11 +15,11 @@ kotlin {
     }
     sourceSets {
         commonMain.dependencies {
-            implementation("org.jetbrains.compose.runtime:runtime:1.12.2")
-            implementation("org.jetbrains.compose.foundation:foundation:1.12.2")
-            implementation("org.jetbrains.compose.ui:ui:1.12.2")
-            // Material 3 1.9.0 = androidx material3 1.4.0: the release with the Expressive components.
-            implementation("org.jetbrains.compose.material3:material3:1.9.0")
+            implementation("org.jetbrains.compose.runtime:runtime:1.13.0-beta02")
+            implementation("org.jetbrains.compose.foundation:foundation:1.13.0-beta02")
+            implementation("org.jetbrains.compose.ui:ui:1.13.0-beta02")
+            // shortcut: beta, because Expressive APIs are internal in the stable 1.9.0; move to the stable release once it ships.
+            implementation("org.jetbrains.compose.material3:material3:1.13.0-beta02")
             implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
             implementation("io.ktor:ktor-client-core:3.6.1")
             implementation("io.ktor:ktor-client-content-negotiation:3.6.1")
