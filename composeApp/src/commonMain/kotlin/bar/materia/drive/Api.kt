@@ -3,6 +3,11 @@ package bar.materia.drive
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.cookies.AcceptAllCookiesStorage
+import io.ktor.client.plugins.cookies.CookiesStorage
+import io.ktor.client.plugins.cookies.HttpCookies
+import io.ktor.http.Cookie
+import io.ktor.http.Url
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
@@ -53,6 +58,8 @@ class ApiException(message: String) : Exception(message)
 class Api {
     val http = HttpClient {
         install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+        // Ktor's Darwin engine ignores NSURLSession cookies, so keep the session cookie ourselves.
+        install(HttpCookies) { storage = SavedCookies }
         expectSuccess = false
     }
 
@@ -75,7 +82,7 @@ class Api {
         return session() ?: throw ApiException("Couldn't start a session")
     }
 
-    suspend fun signOut() { runCatching { http.post("${Endpoints.ACCOUNTS}/api/auth/logout") } }
+    suspend fun signOut() { runCatching { http.post("${Endpoints.ACCOUNTS}/api/auth/logout") }; saveSession(null) }
 
     suspend fun me(): Me = check(http.get("${Endpoints.DRIVE}/api/me")).body<MeResponse>().user
 
@@ -110,4 +117,24 @@ fun Long.bytes(): String {
     var i = 0
     while (v >= 1024 && i < units.lastIndex) { v /= 1024; i++ }
     return "${(v * 10).toLong() / 10.0} ${units[i]}"
+}
+
+expect fun loadSession(): String?
+expect fun saveSession(token: String?)
+
+/** In-memory cookie jar that also persists `md_session`, so sign-in survives app restarts. */
+private object SavedCookies : CookiesStorage {
+    private val jar = AcceptAllCookiesStorage()
+    private var restored = false
+    private suspend fun restore() {
+        if (restored) return
+        restored = true
+        loadSession()?.let { jar.addCookie(Url(Endpoints.ACCOUNTS), Cookie("md_session", it, domain = "materia.bar", path = "/", secure = true, httpOnly = true)) }
+    }
+    override suspend fun get(requestUrl: Url): List<Cookie> { restore(); return jar.get(requestUrl) }
+    override suspend fun addCookie(requestUrl: Url, cookie: Cookie) {
+        restore(); jar.addCookie(requestUrl, cookie)
+        if (cookie.name == "md_session") saveSession(cookie.value.ifEmpty { null })
+    }
+    override fun close() = jar.close()
 }
