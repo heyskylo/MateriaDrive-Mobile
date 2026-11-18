@@ -1,0 +1,7 @@
+.gradle/
+build/
+*/build/
+iosApp/*.xcodeproj
+iosApp/build/
+*.ipa
+.kotlin/
