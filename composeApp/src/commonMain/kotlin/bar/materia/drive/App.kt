@@ -12,7 +12,14 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -71,12 +78,15 @@ private fun SignIn(onSignedIn: (Account) -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val focus = LocalFocusManager.current
     fun go() = scope.launch {
+        focus.clearFocus()
         busy = true; error = null
         runCatching { api.signIn(login.trim(), password) }.onSuccess(onSignedIn).onFailure { error = it.message }
         busy = false
     }
-    Column(Modifier.fillMaxSize().safeDrawingPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { focus.clearFocus() } }
+        .verticalScroll(rememberScrollState()).safeDrawingPadding().imePadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Box(Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(44.dp)).background(Brand.Lavender).padding(28.dp)) {
             Text("Your stuff.\nYours.", color = Brand.Ink, fontSize = 38.sp, fontWeight = FontWeight.Black, lineHeight = 40.sp, modifier = Modifier.align(Alignment.BottomStart))
             Box(Modifier.align(Alignment.TopEnd).size(96.dp).clip(MaterialShapes.Cookie9Sided.toShape()).background(Brand.Lime), Alignment.Center) {
@@ -86,10 +96,12 @@ private fun SignIn(onSignedIn: (Account) -> Unit) {
         Text("Sign in to Materia", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
         Text("Your Materia account works for Drive, Photos and Mail.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(login, { login = it }, label = { Text("Email or username") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next))
+            shape = RoundedCornerShape(20.dp), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+            keyboardActions = KeyboardActions(onNext = { focus.moveFocus(FocusDirection.Down) }))
         OutlinedTextField(password, { password = it }, label = { Text("Password") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp), visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Go))
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Go),
+            keyboardActions = KeyboardActions(onGo = { if (login.isNotBlank() && password.isNotEmpty()) go() else focus.clearFocus() }))
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Button(onClick = { go() }, enabled = !busy && login.isNotBlank() && password.isNotEmpty(),
             modifier = Modifier.fillMaxWidth().height(64.dp), shapes = ButtonDefaults.shapes()) {
