@@ -5,3 +5,4 @@ iosApp/*.xcodeproj
 iosApp/build/
 *.ipa
 .kotlin/
+dist/
